@@ -1,25 +1,154 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+Reproducible results : Course project 1
+=======================================
+
+##Loading and preprocessing the data
+
+This is how we load the data 
+
+```{r loadingdata}
+setwd("~/Documents/coursera/reporesults/reporesults_assignment_1_activity")
+activity<-read.csv("activity.csv")
+```
 
 
-## Loading and preprocessing the data
+##What is mean total number of steps taken per day?
+
+
+#Preparing the data for the analysis
+
+```{r modify for steps per day}
+
+actividay<-tapply(activity$steps,activity$date, sum,NA.rm=TRUE)
+```
+
+#Here is a histogram of the total steps taken per day
+
+```{r Histogram1}
+hist(actividay,cex.axis=0.7,cex.axis=0.4,labels=5,xlab="steps per day",
+     main="Frequency of number of steps per day",cex.main=0.7)
+```
+
+#The mean and median of the total number of steps taken
+
+```{r}
+activimean<-mean(actividay,na.rm=TRUE)
+activimedian<-median(actividay,na.rm=TRUE)
+```
+
+The mean is `r activimean`, the meadian is `r activimedian`
+
+##What is the average daily activity pattern?
+
+#Time series of the 5 minute interval 
+
+Modifying the file for the time series
+
+```{r}
+activitime<-tapply(activity$steps,activity$interval,mean,na.rm=TRUE)
+activitime <- cbind(rownames(activitime), data.frame(activitime, row.names=NULL))
+rows<-activitime$`rownames(activitime)`
+colnames(activitime)<-c("interval","steps")
+```
+
+Here is the plot
+
+```{r}
+plot(activitime$steps, type ="l",xlab="time interval of a day",ylab="average steps",xaxt="n"
+     )
+```
+
+#the 5 minute interval containing maximum number of steps
+
+```{r maxinterval}
+maxistep<-max(activitime$steps)
+maxinterval<-activitime$interval[which.max(activitime$steps)]
+```
+
+the interval containing the maximum steps is `r maxinterval`
+
+##Imputing missing values
+
+#Calculating the number of missing values
+
+```{r}
+activity_na<-sum(is.na(activity$step))
+```
+
+the number of missing values is `r activity_na`
+
+#Imputing the data set with the mean of the group, in this case, the interval
+
+```{r}
+library(simputation)
+activimpute<-impute_lm(activity, steps ~ 1 | interval)
+```
+
+A new data set , called activimpute was created. This set does not contain any more NA values
+
+#Histogram of steps taken each day
+
+Let's modify the file a bit to make the analysis
+
+```{r}
+activimputeday<-tapply(activimpute$steps,activity$date, sum)
+```
+
+#Now we look at the mean and medians of both files : the one with and the one without the NA values
+
+```{r}
+summary(activimputeday)
+summary(actividay)
+```
+
+There is very little difference
+
+#Comparison histogram with and without impute
+
+```{r}
+
+par(mfrow=c(1,2))
+hist(actividay,cex.axis=0.7,cex.axis=0.4,labels=5,xlab="steps per day without impute",
+     main="Frequency of number of steps per day",cex.main=0.7,ylim = c(0,35))
+hist(activimputeday,cex.axis=0.7,cex.axis=0.4,labels=5,xlab="steps per day with impute",
+     main="Frequency of number of steps per day",cex.main=0.7,ylim = c(0,35))
+```
+
+Here we do see a difference : the frequency of the 10-15k break in the histogram has gone up. We have more average values, which is,I guess caused by our imputation strategy.this also explains why the mean and median have hardly changed
+
+##Are there differences in activity patterns between weekdays and weekends?
+
+#New factor variable to indicate the weekday or weekend
+
+```{r}
+activimpute$weekday<-weekdays(as.Date(activimpute$date))
+library(dplyr)
+activimpute<-activimpute %>% 
+                mutate(daytype=ifelse(weekdays(as.Date(date)) %in% 
+                c("Sunday","Saturday"),"weekend","week"))
+```
+
+The new column is called "daytype" and contains "weekend" for a weekend day and "week" for a weekday
+
+#Averaging across all days per interval and split by weekend and week
+
+```{R}
+columns<-c("daytype","interval")
+library(dplyr) 
+activimputetime<-activimpute %>%
+        group_by_at(vars(one_of(columns))) %>%
+        summarize(stepsmean= mean(steps))
+```
+
+#plotting week against weekend
+
+```{R}
+library(lattice)
+
+xyplot(stepsmean ~ interval | daytype, data=activimputetime,type="l",layout=c(1,2))
+```
+
+We see that for weekdays, the peaks of the activity can be found in the morning and in the evening. On weekend days, things are a bit more distributed without having these 2 peaks. Logical!
 
 
 
-## What is mean total number of steps taken per day?
 
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
